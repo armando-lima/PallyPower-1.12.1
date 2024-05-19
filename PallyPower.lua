@@ -96,9 +96,8 @@ function PallyPower_OnUpdate(tdiff)
     end
     PP_NextScan = PP_NextScan - tdiff
     if PP_NextScan < 0 and PP_IsPally then
-        PP_Debug("Scanning");
+        PP_Debug("PallyPower_OnUpdate Scanning");
         PallyPower_ScanRaid()
-        PallyPower_UpdateUI()
     end
     for i, k in LastCast do
         LastCast[i] = k - tdiff
@@ -137,7 +136,6 @@ function PallyPower_OnEvent(event)
         BuffIcon[4] = "Interface\\Icons\\Spell_Magic_GreaterBlessingofKings"
         BuffIcon[5] = "Interface\\Icons\\Spell_Holy_GreaterBlessingofSanctuary"
       end
-      PallyPower_ScanSpells()
     end
 
     if (event == "PLAYER_ENTERING_WORLD" and (not PallyPower_Assignments[UnitName("player")])) then
@@ -173,62 +171,12 @@ function PallyPower_SlashCommandHandler(msg)
             PP_DebugEnabled = true
         end
     end
-    if (msg == "report") then
-        PallyPower_Report()
-        return true
-    end
     if PallyPowerFrame:IsVisible() then
         PallyPowerFrame:Hide()
     else
         PallyPowerFrame:Show()
     end
     PallyPower_UpdateUI()
-end
-
-function PallyPower_Report()
-    if PallyPower_CanControl(UnitName("player")) then
-        local type
-        if GetNumRaidMembers() > 0 then
-            type = "RAID"
-        else
-            type = "PARTY"
-        end
-        PP_Debug(type);
-        SendChatMessage(PallyPower_Assignments1, type)
-        for name in AllPallys do
-            local blessings
-            local list = {}
-            list[0] = 0;
-            list[1] = 0;
-            list[2] = 0;
-            list[3] = 0;
-            list[4] = 0;
-            list[5] = 0;
-            PP_Debug(list[0]);
-            for id = 0, 9 do
-                local bid = PallyPower_Assignments[name][id]
-                if bid >= 0 then
-                    list[bid] = list[bid] + 1
-                end
-            end
-            for id = 0, 5 do
-                if (list[id] > 0) then
-                    if (blessings) then
-                        blessings = blessings .. ", "
-                    else
-                        blessings = ""
-                    end
-                    blessings = blessings .. PallyPower_BlessingID[id]
-                end
-            end
-            if not (blessings) then
-                blessings = "Nothing"
-            end
-            SendChatMessage(name .. ": " .. blessings, type)
-            PP_Debug(name .. ": " .. blessings)
-        end
-        SendChatMessage(PallyPower_Assignments2, type)
-    end
 end
 
 function PallyPower_FormatTime(time)
@@ -241,10 +189,7 @@ function PallyPower_FormatTime(time)
 end
 
 function PallyPowerGrid_Update()
-    if not initalized then
-        PallyPower_ScanSpells()
-    end
-    -- Pally 1 is always myself
+    -- Pally 1 is always player
     local i = 1;
     local numPallys = 0
     local name, skills
@@ -452,7 +397,7 @@ function PallyPower_ScanSpells()
     if nameTalent then
         local divineGraceTalent = string.find(nameTalent, PallyPower_DivineGraceTalentSearch);
         if divineGraceTalent and currRank > 0 then
-            for id, name in pairs(PallyPower_BlessingID) do
+            for id in PallyPower_BlessingID do
                 if (id == 0 or id == 3) then
                     RankInfo[id]["talent"] = currRank;
                 end
@@ -465,7 +410,7 @@ function PallyPower_ScanSpells()
     if nameTalent then
         local guardianFavorTalent = string.find(nameTalent, PallyPower_GuardianFavorTalentSearch);
         if guardianFavorTalent and currRank > 0 then
-            for id, name in pairs(PallyPower_BlessingID) do
+            for id in PallyPower_BlessingID do
                 if (id == 2 or (id == 5 and hasSanctuary == 1)) then
                     RankInfo[id]["talent"] = currRank;
                 end
@@ -478,7 +423,7 @@ function PallyPower_ScanSpells()
     if nameTalent then
         local divineMightTalent = string.find(nameTalent, PallyPower_DivineMightTalentSearch);
         if divineMightTalent and currRank > 0 then
-            for id, name in pairs(PallyPower_BlessingID) do
+            for id in PallyPower_BlessingID do
                 if (id == 1 or id == 4) then
                     RankInfo[id]["talent"] = currRank;
                 end
@@ -532,9 +477,6 @@ function PallyPower_RequestSend()
 end
 
 function PallyPower_SendSelf()
-    if not initalized then
-        PallyPower_ScanSpells()
-    end
     if not AllPallys[UnitName("player")] then
         return
     end
@@ -725,39 +667,30 @@ function PallyPower_PerformCycleBackwards(name, class)
 
     shift = IsShiftKeyDown()
 
-    --force pala (all buff possible) when shift wheeling
-    if shift then
-        class = 4
-    end
-
     if not PallyPower_Assignments[name][class] then
-        cur = 6
+        currentBuffSelection = 6
     else
-        cur = PallyPower_Assignments[name][class]
-        if cur == -1 then
-            cur = 6
+        currentBuffSelection = PallyPower_Assignments[name][class]
+        if currentBuffSelection == -1 then
+            currentBuffSelection = 6
         end
     end
 
-    PallyPower_Assignments[name][class] = -1
-
-    for test = cur - 1, -1, -1 do
-        cur = test
-        if PallyPower_CanBuff(name, test) and (PallyPower_NeedsBuff(class, test) or shift) then
-            do
-                break
-            end
+    for buff = currentBuffSelection - 1, -1, -1 do
+        currentBuffSelection = buff
+        if PallyPower_CanBuff(name, buff) and (PallyPower_NeedsBuff(class, buff) or shift) then
+            break
         end
     end
 
     if shift then
-        for test = 0, 9 do
-            PallyPower_Assignments[name][test] = cur
+        for class = 0, 9 do
+            PallyPower_Assignments[name][class] = currentBuffSelection
         end
-        PallyPower_SendMessage("MASSIGN " .. name .. " " .. cur)
+        PallyPower_SendMessage("MASSIGN " .. name .. " " .. currentBuffSelection)
     else
-        PallyPower_Assignments[name][class] = cur
-        PallyPower_SendMessage("ASSIGN " .. name .. " " .. class .. " " .. cur)
+        PallyPower_Assignments[name][class] = currentBuffSelection
+        PallyPower_SendMessage("ASSIGN " .. name .. " " .. class .. " " .. currentBuffSelection)
     end
 
     PallyPower_UpdateUI()
@@ -767,77 +700,66 @@ function PallyPower_PerformCycle(name, class)
 
     shift = IsShiftKeyDown()
 
-    --force pala (all buff possible) when shift wheeling
-    if shift then
-        class = 4
-    end
-
     if not PallyPower_Assignments[name][class] then
-        cur = -1
+        currentBuffSelection = -1
     else
-        cur = PallyPower_Assignments[name][class]
-    end
-    PallyPower_Assignments[name][class] = -1
-    for test = cur + 1, 6 do
-        if PallyPower_CanBuff(name, test) and (PallyPower_NeedsBuff(class, test) or shift) then
-            cur = test
-            do
-                break
-            end
+        currentBuffSelection = PallyPower_Assignments[name][class]
+        if currentBuffSelection == 6 then
+            currentBuffSelection = -1
         end
     end
 
-    if (cur == 6) then
-        cur = -1
+    for buff = currentBuffSelection + 1, 6 do
+        if PallyPower_CanBuff(name, buff) and (PallyPower_NeedsBuff(class, buff) or shift) then
+            currentBuffSelection = buff
+            break
+        end
     end
 
     if shift then
-        for test = 0, 9 do
-            PallyPower_Assignments[name][test] = cur
+        for class = 0, 9 do
+            PallyPower_Assignments[name][class] = currentBuffSelection
         end
-        PallyPower_SendMessage("MASSIGN " .. name .. " " .. cur)
+        PallyPower_SendMessage("MASSIGN " .. name .. " " .. currentBuffSelection)
     else
-        PallyPower_Assignments[name][class] = cur
-        PallyPower_SendMessage("ASSIGN " .. name .. " " .. class .. " " .. cur)
+        PallyPower_Assignments[name][class] = currentBuffSelection
+        PallyPower_SendMessage("ASSIGN " .. name .. " " .. class .. " " .. currentBuffSelection)
     end
 
     PallyPower_UpdateUI()
 end
 
-function PallyPower_CanBuff(name, test)
-    if test == 6 then
+function PallyPower_CanBuff(name, buff)
+    -- buff cycles from 0 to 6 in the order of PallyPower_BlessingID (localization.lua)
+    -- 6 is the empty slot corresponding to no buffs
+    -- Every class can have the "empty" buff
+    if buff == 6 then
         return true
     end
-    if (not AllPallys[name][test]) or (AllPallys[name][test]["rank"] == 0) then
+    -- If pally does not have the skill (e.g. not specced into sanctuary), it skips it
+    if (not AllPallys[name][buff]) or (AllPallys[name][buff]["rank"] == 0) then
         return false
     end
     return true
 end
 
-function PallyPower_NeedsBuff(class, test)
-    if test == 6 then
-        return true
-    end
-    if test == -1 then
+function PallyPower_NeedsBuff(class, buff)
+    if (buff == 6) or (buff == -1) then
         return true
     end
     if PP_PerUser.smartbuffs then
         -- no wisdom for warriors and rogues
-        if (class == 0 or class == 1) and test == 0 then
+        if (class == 0 or class == 1) and buff == 0 then
             return false
         end
-        -- no salv for warriors
-        --if class == 0 and test == 2 then
-        --    return false
-        --end
         -- no might for casters
-        if (class == 2 or class == 5 or class == 6 or class == 7) and test == 1 then
+        if (class == 2 or class == 5 or class == 6 or class == 7) and buff == 1 then
             return false
         end
     end
 
     for name, skills in PallyPower_Assignments do
-        if (AllPallys[name]) and ((skills[class]) and (skills[class] == test)) then
+        if (AllPallys[name]) and ((skills[class]) and (skills[class] == buff)) then
             return false
         end
     end
@@ -870,7 +792,7 @@ function PallyPower_ScanInventory()
     if not PP_IsPally then
         return
     end
-    PP_Debug("Scanning for symbols");
+    PP_Debug("PallyPower_ScanInventory scanning");
     oldcount = PP_Symbols
     PP_Symbols = 0
     for bag = 0, 4 do
@@ -1161,7 +1083,6 @@ function PallyPower_ShowFeedback(msg, r, g, b, a)
         UIErrorsFrame:AddMessage(msg, r, g, b, a)
     end
 end
-
 
 function PallyPowerGridButton_OnMouseWheel(btn, arg1)
     _, _, pnum, class = string.find(btn:GetName(), "PallyPowerFramePlayer(.+)Class(.+)");

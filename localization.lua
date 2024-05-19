@@ -1,4 +1,4 @@
-PallyPower_Version = "1.5"
+PallyPower_Version = "1.6"
 SLASH_PALLYPOWER1 = "/pp"
 SLASH_PALLYPOWER2 = "/pallypower"
 
@@ -51,9 +51,6 @@ PallyPower_CouldntFind = "Couldn't find a target for %s on %s!"
 
 -- Buff name, Class name, Person Name
 PallyPower_Casting = "Casting %s on %s (%s)"
--- Reporting
-PallyPower_Assignments1 = "--- Paladin assignments ---"
-PallyPower_Assignments2 = "--- end of assignments ---"
 
  PallyPower_ClassID = { };
 PallyPower_ClassID[0] = "Warrior";

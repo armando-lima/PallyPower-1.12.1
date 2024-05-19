@@ -177,7 +177,7 @@
                     </Anchors>
                 </Texture>
                   
-                  <Texture file="Interface\Icons\Spell_holy_greaterblessingofkings" name="$parentIcon1">
+                  <Texture file="Interface\Icons\Spell_Holy_FistOfJustice" name="$parentIcon1">
                     <Size>
                         <AbsDimension x="16" y="16"/>
                     </Size>
