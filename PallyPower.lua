@@ -98,6 +98,7 @@ function PallyPower_OnUpdate(tdiff)
     if PP_NextScan < 0 and PP_IsPally then
         PP_Debug("PallyPower_OnUpdate Scanning");
         PallyPower_ScanRaid()
+        PallyPower_UpdateUI()
     end
     for i, k in LastCast do
         LastCast[i] = k - tdiff
